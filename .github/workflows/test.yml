@@ -1,26 +1,26 @@
 name: Test
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: actions/cache@v2
-      name: Configure pip caching
+        cache: 'pip'
+        cache-dependency-path: setup.py
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        path: ~/.cache/ms-playwright/
+        key: ${{ runner.os }}-browsers
     - name: Install dependencies
       run: |
         pip install -e '.[test]'
@@ -28,49 +28,19 @@ jobs:
       run: |
         python -m playwright install-deps
         shot-scraper install
+        shot-scraper install -b firefox
+        shot-scraper install -b webkit
     - name: Run tests
       run: |
         pytest
-    - name: Generate example images
+    - name: Check if cog needs to be run
       run: |
-        mkdir -p examples
-        shot-scraper https://github.com/ -o examples/github.com.png
-        shot-scraper https://simonwillison.net/ -s '#bighead' -o examples/bighead.png
-        shot-scraper https://simonwillison.net/ -s '#bighead' \
-          --javascript "document.body.style.backgroundColor = 'pink';" \
-          -o examples/bighead-pink.png
-        shot-scraper https://simonwillison.net/ -w 400 -h 800 -o examples/simon-narrow.png
-        shot-scraper https://simonwillison.net/ \
-          -h 800 -o examples/simonwillison-quality-80.jpg --quality 80
-        shot-scraper 'https://www.owlsnearme.com/?place=127871' \
-          --selector 'section.secondary' \
-          -o examples/owlsnearme-wait.jpg \
-          --wait 2000
-        # And using multi
-        echo '
-        - output: examples/example.com.png
-          url: http://www.example.com/
-        - output: examples/w3c.org.png
-          url: https://www.w3.org/
-        - output: examples/bighead-from-multi.png
-          url: https://simonwillison.net/
-          selector: "#bighead"
-        - output: examples/bighead-pink-from-multi.png
-          url: https://simonwillison.net/
-          selector: "#bighead"
-          javascript: |
-            document.body.style.backgroundColor = "pink";
-        - output: examples/simon-narrow-from-multi.png
-          url: https://simonwillison.net/
-          width: 400
-          height: 800
-        - output: examples/simon-quality-80-from-multi.png
-          url: https://simonwillison.net/
-          height: 800
-          quality: 80
-        ' | shot-scraper multi -
+        cog --check docs/*.md
+    - name: Run test examples
+      run: |
+        tests/run_examples.sh
     - name: Archive examples
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: examples
+        name: examples-${{ matrix.python-version }}
         path: examples/*

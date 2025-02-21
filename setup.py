@@ -1,7 +1,7 @@
-from setuptools import setup
 import os
+from setuptools import setup
 
-VERSION = "0.3"
+VERSION = "1.7"
 
 
 def get_long_description():
@@ -14,7 +14,7 @@ def get_long_description():
 
 setup(
     name="shot-scraper",
-    description="Tool for taking automated screenshots",
+    description="A command-line utility for taking automated screenshots of websites",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     author="Simon Willison",
@@ -32,6 +32,6 @@ setup(
         shot-scraper=shot_scraper.cli:cli
     """,
     install_requires=["click", "PyYAML", "playwright", "click-default-group"],
-    extras_require={"test": ["pytest"]},
+    extras_require={"test": ["pytest", "cogapp", "pytest-mock"]},
     python_requires=">=3.7",
 )
